@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tenho uma pergunta pra você 💌</title>
+<style>
+:root{--bg1:#ffe4ec;--bg2:#ffc2d4;--card:#ffffffd9;--text:#4a1d2e;--muted:#8a4a60;--accent:#e63e6d;--accent2:#ff7aa2;--no:#e9d5dc;--noText:#6b3a4d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg1:#2a0f1b;--bg2:#4a1a2f;--card:#3a1626d9;--text:#ffe6ee;--muted:#e9a8bd;--accent:#ff5c8a;--accent2:#ff8fb0;--no:#5a2a3e;--noText:#ffd3e0}}
+:root[data-theme="dark"]{--bg1:#2a0f1b;--bg2:#4a1a2f;--card:#3a1626d9;--text:#ffe6ee;--muted:#e9a8bd;--accent:#ff5c8a;--accent2:#ff8fb0;--no:#5a2a3e;--noText:#ffd3e0}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;height:100%;display:flex;align-items:center;justify-content:center;font-family:Georgia,"Times New Roman",serif;color:var(--text);background:linear-gradient(160deg,var(--bg1),var(--bg2));overflow:hidden;padding:16px}
+.heart{position:fixed;bottom:-40px;user-select:none;pointer-events:none;animation:up linear forwards;opacity:.7}
+@keyframes up{to{transform:translateY(-110vh) rotate(25deg);opacity:0}}
+.card{position:relative;z-index:2;max-width:460px;width:100%;background:var(--card);backdrop-filter:blur(8px);border-radius:28px;padding:36px 26px;text-align:center;box-shadow:0 20px 50px #e63e6d33}
+.card h1{font-size:clamp(26px,7vw,36px);margin:12px 0 10px;line-height:1.2}
+.card p{color:var(--muted);font-size:18px;line-height:1.5;margin:0 0 26px}
+.emoji{font-size:64px;display:inline-block;animation:beat 1.2s infinite}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.btns{display:flex;gap:16px;justify-content:center;align-items:center;min-height:80px}
+button{font:inherit;font-size:20px;border:0;border-radius:999px;cursor:pointer;padding:14px 34px;transition:transform .15s}
+#sim{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 8px 20px #e63e6d55}
+#sim:hover{transform:scale(1.05)}
+#nao{background:var(--no);color:var(--noText)}
+#final{display:none}
+.final-msg{font-size:20px;color:var(--text);margin-bottom:0!important}
+canvas{position:fixed;inset:0;z-index:3;pointer-events:none}
+#msgBox{margin-top:20px}
+#msgBox textarea{width:100%;min-height:80px;border-radius:16px;border:1px solid var(--no);padding:12px;font:inherit;font-size:16px;background:var(--bg1);color:var(--text);resize:vertical}
+#msgBox button{margin-top:10px;font-size:16px;padding:10px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+#ownerBtn{display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;z-index:7;font-size:14px;padding:8px 14px;background:var(--card);color:var(--text)}
+#painel{display:none;position:fixed;inset:0;z-index:6;background:var(--card);backdrop-filter:blur(10px);padding:calc(env(safe-area-inset-top,0px) + 56px) 18px 24px;overflow-y:auto;text-align:left}
+#painel h2{margin:0 0 6px}
+#painel .item{background:var(--bg1);border-radius:16px;padding:14px;margin-top:12px;line-height:1.5}
+#painel small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="card" id="pergunta">
+  <div class="emoji">💌</div>
+  <h1><span id="nome">Amor</span>, tenho uma pergunta pra você…</h1>
+  <p id="texto">Desde que você chegou, tudo ficou mais leve e mais bonito. Quero te ter ao meu lado todos os dias.</p>
+  <h1 style="font-size:clamp(28px,8vw,40px);margin-top:0">Quer namorar comigo? 💍❤️</h1>
+  <div class="btns">
+    <button id="sim">Sim 💖</button>
+    <button id="nao">Não 😢</button>
+  </div>
+</div>
+<div class="card" id="final">
+  <div class="emoji">🥰</div>
+  <h1>Ela disse SIM! 🎉</h1>
+  <p class="final-msg" id="msgFinal">Você acabou de me fazer o homem mais feliz do mundo. Eu te amo!</p>
+  <p style="margin-top:18px;font-size:16px" id="assina">Com amor, seu namorado 💕</p>
+  <div id="msgBox" style="display:none">
+    <textarea id="msgTxt" maxlength="500" placeholder="Quer deixar uma mensagem pra mim? 💌"></textarea>
+    <button id="msgEnviar">Enviar mensagem 💕</button>
+  </div>
+</div>
+<button id="ownerBtn">🔒 Respostas</button>
+<div id="painel">
+  <h2>🔒 Respostas</h2>
+  <small>Só você vê esta tela.</small>
+  <div id="lista"><div class="item">Ainda não chegou nenhuma resposta…</div></div>
+</div>
+<canvas id="c"></canvas>
+<script>
+// ✏️ PERSONALIZE AQUI
+var NOME_DELA = "Amor";
+var SEU_NOME = "";
+var FRASE = "Desde que você chegou, tudo ficou mais leve e mais bonito. Quero te ter ao meu lado todos os dias.";
+
+document.getElementById("nome").textContent = NOME_DELA;
+document.getElementById("texto").textContent = FRASE;
+if (SEU_NOME) document.getElementById("assina").textContent = "Com amor, " + SEU_NOME + " 💕";
+
+var sim = document.getElementById("sim"), nao = document.getElementById("nao");
+var tentativas = 0;
+var frases = ["Não 😢","Tem certeza? 🥺","Pensa direitinho… 💭","Olha o meu coração! 💔","Última chance! 😭","Você sabe que quer 😏"];
+var escala = 1;
+
+function fugir(e){
+  if (e) e.preventDefault();
+  tentativas++;
+  nao.textContent = frases[Math.min(tentativas, frases.length - 1)];
+  escala = Math.min(escala + 0.18, 2.4);
+  sim.style.transform = "scale(" + escala + ")";
+  nao.style.position = "fixed";
+  var w = nao.offsetWidth, h = nao.offsetHeight;
+  var x = Math.random() * (window.innerWidth - w - 20) + 10;
+  var y = Math.random() * (window.innerHeight - h - 20) + 10;
+  nao.style.left = x + "px";
+  nao.style.top = y + "px";
+  nao.style.zIndex = 5;
+}
+nao.addEventListener("click", fugir);
+
+// corações flutuando
+setInterval(function(){
+  var s = document.createElement("span");
+  s.className = "heart";
+  s.textContent = ["❤️","💖","💕","🌹","💗"][Math.floor(Math.random()*5)];
+  s.style.left = Math.random()*100 + "vw";
+  s.style.fontSize = (16 + Math.random()*26) + "px";
+  s.style.animationDuration = (6 + Math.random()*6) + "s";
+  document.body.appendChild(s);
+  setTimeout(function(){ s.remove(); }, 12000);
+}, 450);
+
+// confete
+function confete(){
+  var cv = document.getElementById("c"), ctx = cv.getContext("2d");
+  cv.width = innerWidth; cv.height = innerHeight;
+  var cores = ["#e63e6d","#ff7aa2","#ffd166","#ffffff","#ff9ec0"];
+  var p = [];
+  for (var i = 0; i < 160; i++) p.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,r:4+Math.random()*6,vy:2+Math.random()*4,vx:-1.5+Math.random()*3,c:cores[i%cores.length],a:Math.random()*6});
+  var t = 0;
+  (function loop(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    p.forEach(function(q){
+      q.y += q.vy; q.x += q.vx + Math.sin(q.a += .05);
+      ctx.fillStyle = q.c; ctx.fillRect(q.x, q.y, q.r, q.r*1.6);
+    });
+    if (++t < 400) requestAnimationFrame(loop); else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+sim.addEventListener("click", function(){
+  document.getElementById("pergunta").style.display = "none";
+  nao.style.display = "none";
+  document.getElementById("final").style.display = "block";
+  confete();
+  salvarResposta();
+});
+
+// 🔒 Resposta privada: só o dono da página consegue ler
+var dbRef = null, meuId = null, docRef = null;
+var pronto = (async function(){
+  try{
+    if(!window.claude || !claude.use) return;
+    var user = await claude.use("user");
+    dbRef = await claude.use("db");
+    if(!user || !dbRef) return;
+    meuId = await user.id();
+    if(await user.isOwner()) painelDono();
+  }catch(e){}
+})();
+
+function painelDono(){
+  var btn = document.getElementById("ownerBtn"), pn = document.getElementById("painel"), lista = document.getElementById("lista");
+  btn.style.display = "block";
+  btn.addEventListener("click", function(){
+    var aberto = pn.style.display === "block";
+    pn.style.display = aberto ? "none" : "block";
+    btn.textContent = aberto ? "🔒 Respostas" : "✖ Fechar";
+  });
+  try{
+    dbRef.collection("respostas").onSnapshot(function(snap){
+      lista.textContent = "";
+      if(!snap.docs.length){ var v = document.createElement("div"); v.className = "item"; v.textContent = "Ainda não chegou nenhuma resposta…"; lista.appendChild(v); return; }
+      snap.docs.forEach(function(d){
+        var r = d.data() || {}, it = document.createElement("div"), a = document.createElement("div"), b = document.createElement("small");
+        it.className = "item";
+        a.textContent = (r.resposta === "sim" ? "💖 Disse SIM!" : "Resposta: " + r.resposta) + (r.mensagem ? "\n💌 " + r.mensagem : "");
+        a.style.whiteSpace = "pre-wrap";
+        var dt = r.em ? new Date(r.em).toLocaleString("pt-BR") : "";
+        b.textContent = dt + " · clicou no “Não” " + (r.tentativasNao || 0) + " vez(es)";
+        it.appendChild(a); it.appendChild(b); lista.appendChild(it);
+      });
+    }, function(){});
+  }catch(e){}
+}
+
+async function salvarResposta(){
+  try{
+    await pronto;
+    if(!dbRef || !meuId) return;
+    docRef = dbRef.collection("respostas").doc(meuId);
+    await docRef.set({resposta:"sim", tentativasNao:tentativas, mensagem:"", em:new Date().toISOString()});
+    document.getElementById("msgBox").style.display = "block";
+  }catch(e){}
+}
+
+document.getElementById("msgEnviar").addEventListener("click", async function(){
+  var t = document.getElementById("msgTxt").value.trim();
+  if(!t || !docRef) return;
+  try{
+    await docRef.update({mensagem:t});
+    document.getElementById("msgBox").textContent = "Mensagem enviada 💌";
+  }catch(e){}
+});
+</script>
+</body>
+</html>
